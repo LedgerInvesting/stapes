@@ -2,13 +2,14 @@ from typing import Dict, Tuple, Optional, List, Any
 import tempfile
 
 import cmdstanpy as csp
+import numpy as np
 
 from .parameter import Parameter, make_parameter
 from .likelihood import Likelihood, FAMILY_INDEX_LOOKUP
 from .parse import parse_text
 from .utils import StanCode, ConfigParameter, UTIL_FUNCTIONS
 from .variable import get_variable_stan
-from .data import build_stan_data
+from .data import build_stan_data, DataCoords, DataValue
 
 
 class Model(object):
@@ -16,6 +17,8 @@ class Model(object):
     def __init__(self, parameters: Dict[str, Parameter], likelihoods: Dict[str, Likelihood]):
         self.parameters = parameters
         self.likelihoods = likelihoods
+        self.train_data: Dict[DataCoords, DataValue] = {}
+        self.distribution_ids = {}
 
     @property
     def offsets(self) -> List[Tuple[int, int]]:
@@ -75,9 +78,12 @@ class Model(object):
         return csp.CmdStanModel(stan_file=tmp_name)
 
     def fit(self, train_data, config: Dict[str, float]):
+        self.train_data = train_data
         stan_data = build_stan_data(train_data, self.offsets)
         stan_model = self.stan_model
         final_config = self.resolve_config(config)
+        for lik in self.likelihoods:
+            self.distribution_ids[lik] = final_config[f"{lik}__family"]
         fit = stan_model.sample(data={**stan_data, **final_config})
         samples = fit.stan_variables()
         for param in self.parameters.values():
@@ -113,6 +119,26 @@ class Model(object):
             final_config[name] = inv_transform(value)
 
         return final_config
+
+    def predict(
+        self,
+        pred_coords: List[DataCoords],
+        pred_data: Dict[DataCoords, DataValue],
+        seed: Optional[int] = None,
+    ) -> Dict[DataCoords, DataValue]:
+        random_state = np.random.default_rng(seed)
+        prediction_data = {**self.train_data, **pred_data}
+        predictions = {}
+        for coord in sorted(pred_coords, key=lambda x: (x[2] + x[3], x[2], x[0], x[1])):
+            name, tri_id, exp_id, dev_id = coord
+            if name not in self.likelihoods:
+                raise Exception(f"Cannot predict variable {name}")
+            pred_value = self.likelihoods[name].predict(
+                self.parameters, random_state, self.distribution_ids[name], prediction_data, coord
+            )
+            prediction_data[coord] = pred_value
+            predictions[coord] = pred_value
+        return predictions
 
 
 def build_model(text: str):

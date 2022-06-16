@@ -57,9 +57,9 @@ def evaluate_operand(
         variable = operand.name
         dev_offset = sum([1 if mod == "prev_dev" else 0 for mod in operand.modifiers])
         exp_offset = sum([1 if mod == "prev_exp" else 0 for mod in operand.modifiers])
-        field, slc, dev, exp = coords
+        _, slc, dev, exp = coords
         # Then use data_accessor to get the value of the variable for this cell
-        return data[(field, slc, dev-dev_offset, exp-exp_offset)]
+        return data[(variable, slc, dev-dev_offset, exp-exp_offset)]
     elif isinstance(operand, float):
         # If it's a float, it's a plain numeric literal.
         return operand

@@ -79,7 +79,7 @@ class Likelihood(object):
         mean = evaluate_operand(self.mean_def, params, state, data, coords)
         variance = evaluate_operand(self.variance_def, params, state, data, coords)
         distribution = FAMILY_NAME_LOOKUP[distribution_id-1]
-        return variates_from_mean_variance(mean,  variance, distribution, state)
+        return variates_from_mean_variance(mean, variance, distribution, state)
 
 
 def _generate_op_text(op: ast.Operand, params: Dict[str, Parameter]) -> str:

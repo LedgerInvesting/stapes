@@ -1,10 +1,10 @@
-from typing import List, Dict, Set
+from typing import Dict, Set
 from pathlib import Path
 
 import numpy as np
 import scipy.stats
 
-from ..data import DataCoords, DataValue
+from ..data import DataCoords, DataValue, get_variable_value
 from ..utils import process_stem
 from .parameter import Parameter
 
@@ -16,7 +16,7 @@ class Factor(Parameter):
         self.group_name = args.get("group")
         if not self.group_name:
             raise Exception("Vector parameter must have the `group` argument provided")
-        self.is_centered = bool(args.get("is_centered", "false"))
+        self.is_centered = args.get("is_centered", "false") == "true"
         super().__init__(name, dtype)
 
         self.stem = process_stem(
@@ -36,7 +36,7 @@ class Factor(Parameter):
         data: Dict[DataCoords, DataValue],
         coords: DataCoords
     ) -> np.ndarray:
-        idx = int(data[coords])
+        idx = int(get_variable_value(data, coords, self.group_name))
         max_idx = self.samples[".."].shape[1]
         # If the index id was present in the training data, use the posterior samples.
         if idx <= max_idx:

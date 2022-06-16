@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..data import DataCoords, DataValue
+from ..data import DataCoords, DataValue, get_variable_value
 from ..utils import process_stem
 from .parameter import Parameter
 
@@ -37,7 +37,7 @@ class Vector(Parameter):
         data: Dict[DataCoords, DataValue],
         coords: DataCoords
     ) -> np.ndarray:
-        idx = int(data[coords])
+        idx = int(get_variable_value(data, coords, self.group_name))
         max_idx = self.samples[".."].shape[1]
         # If the index value isn't present in the training data, throw an exception. Unlike factors,
         # vectors are unable to extrapolate to unseen indices.

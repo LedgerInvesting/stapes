@@ -16,6 +16,27 @@ DataValue = Union[
 ]
 
 
+def get_variable_value(
+    data: Dict[DataCoords, DataValue],
+    coords: DataCoords,
+    field_name: str
+) -> Union[float, np.ndarray]:
+    base_name, tri_id, exp_id, dev_id = coords
+    max_triangle_id = max([coord[0] for coord in data])
+    if field_name == "DevLagId":
+        return dev_id
+    elif field_name == "ExpPeriodId":
+        return exp_id
+    elif field_name == "TriangleId":
+        return tri_id
+    elif field_name == "TriangleDevLagId":
+        return max_triangle_id * (dev_id - 1) + tri_id
+    elif field_name == "TriangleExpPeriodId":
+        return max_triangle_id * (exp_id - 1) + tri_id
+    else:
+        return coords[(field_name, tri_id, exp_id, dev_id)]
+
+
 def build_stan_data(
     train_data: Dict[DataCoords, DataValue],
     offsets: List[Tuple[int, int]]

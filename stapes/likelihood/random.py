@@ -2,6 +2,7 @@ import numpy as np
 import scipy.stats
 
 MIN_POSITIVE_MU = 1e-8
+MIN_PRED_VALUE = 1e-4
 
 
 def variates_from_mean_variance(
@@ -25,4 +26,4 @@ def variates_from_mean_variance(
         distr = scipy.stats.gamma(a=shape_param, scale=1 / rate_param)
     else:
         raise Exception(f"Unimplemented distribution {distribution.lower()}")
-    return distr.rvs(random_state=state)
+    return np.maximum(distr.rvs(random_state=state), MIN_PRED_VALUE)
