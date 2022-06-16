@@ -1,10 +1,10 @@
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, Tuple, Optional, List, Any
 import tempfile
 
 import cmdstanpy as csp
 
 from .parameter import Parameter, make_parameter
-from .likelihood import Likelihood
+from .likelihood import Likelihood, FAMILY_INDEX_LOOKUP
 from .parse import parse_text
 from .utils import StanCode, ConfigParameter, UTIL_FUNCTIONS
 from .variable import get_variable_stan
@@ -43,6 +43,8 @@ class Model(object):
             result += param.config_parameters
         for lik in self.likelihoods.values():
             result += lik.config_parameters
+        for variable in self.variables:
+            result += get_variable_stan(variable).config_parameters
         return result
 
     @property
@@ -52,7 +54,7 @@ class Model(object):
         for offset in self.offsets:
             result += _offset_to_stan_code(offset)
         for variable in self.variables:
-            result += get_variable_stan(variable)
+            result += get_variable_stan(variable).stan_code
         for param in self.parameters.values():
             result += param.stan_code
         for lik in self.likelihoods.values():
@@ -75,10 +77,42 @@ class Model(object):
     def fit(self, train_data, config: Dict[str, float]):
         stan_data = build_stan_data(train_data, self.offsets)
         stan_model = self.stan_model
-        fit = stan_model.sample(data={**stan_data, **config})
+        final_config = self.resolve_config(config)
+        fit = stan_model.sample(data={**stan_data, **final_config})
         samples = fit.stan_variables()
         for param in self.parameters.values():
             param.set_samples(samples)
+
+    def resolve_config(self, config: Dict[str, Any]) -> Dict[str, float]:
+        """Perform clean-up and validation work on a configuration with respect to a given model."""
+        final_config = {}
+        bounds = {}
+        for param in self.config_parameters:
+            final_config[param.name] = param.default_value
+            bounds[param.name] = (param.min_value, param.max_value, param.inv_transform)
+
+        for name, value in config.items():
+            # Make sure the configuration element is valid
+            if name not in final_config:
+                raise KeyError(f"Unrecognized configuration parameter {name} supplied")
+
+            # If it's a family parameter, map to the appropriate integer
+            if name[-8:] == "__family":
+                try:
+                    final_config[name] = FAMILY_INDEX_LOOKUP[value.lower()]
+                except KeyError:
+                    raise KeyError(f"Unrecognized distribution family {value} supplied")
+                continue
+
+            # Make sure the supplied value falls within the bounds
+            min_value, max_value, inv_transform = bounds[name]
+            if value <= min_value or value >= max_value:
+                raise ValueError(
+                    f"Configuration parameter {name} must be " "between {min_value} and {max_value}"
+                )
+            final_config[name] = inv_transform(value)
+
+        return final_config
 
 
 def build_model(text: str):
