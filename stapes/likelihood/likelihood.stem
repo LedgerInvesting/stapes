@@ -1,0 +1,22 @@
+data {
+    int<lower=1, upper=3> .family;
+}
+transformed parameters {
+    array[N] real .log_lik;
+    array[N] real .mean;
+    array[N] real .variance;
+
+    // !definitions
+    for (n in 1:N) {
+        .mean[n] = @mean_definition;
+        .variance[n] = @variance_definition;
+    }
+
+    .log_lik = mean_variance_log_lik(..[1:N], .mean, .variance, .family);
+}
+model {
+    // !definitions
+    for (n in 1:N) {
+        target += .log_lik[n];
+    }
+}

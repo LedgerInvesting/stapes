@@ -1,0 +1,4 @@
+data {
+    int<lower=1> .count;
+    array[N] int<lower=1, upper=.count> ..;
+}

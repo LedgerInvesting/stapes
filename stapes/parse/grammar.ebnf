@@ -1,0 +1,27 @@
+@@grammar :: STAPES
+@@whitespace :: /[\t\n ]+/
+@@keyword :: mean variance
+
+start = { @+:statement ';' }+ ;
+statement = likelihood | param_spec ;
+
+likelihood = variable:variable aspect:aspect '=' value:expression ;
+aspect = "mean" | "variance" ;
+expression = args+:expression (op:'+' | op:'-') args+:add_operand | add_operand ;
+add_operand = args+:add_operand (op:'*' | op:'/') args+:mul_operand | mul_operand ;
+mul_operand = args+:exp_operand op:'^' args+:exp_operand | exp_operand ;
+exp_operand = op:'-' args+:neg_operand | neg_operand ;
+neg_operand = parameter | variable_operand | op_call | number | '(' @:expression ')' ;
+variable_operand = name:variable { '.' modifiers+:name }* ;
+op_call = name:name '(' arg:expression ')' ;
+
+param_spec = dtype:name param:parameter '=' spec:func_call ;
+func_call = name:name '(' args+:call_arg { ',' args+:call_arg }* ')'
+          | name:name '(' ')' ;
+call_arg = arg_name:name '=' value:arg ;
+arg = name | variable | number ;
+
+name = /[a-z][a-z0-9_]*/ ;
+parameter = /:[a-z][a-z0-9_]*/ ;
+variable = /[A-Z][A-Za-z0-9]*/ ;
+number = /[0-9]+(\.[0-9]+)?/ ;

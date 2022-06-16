@@ -1,0 +1,33 @@
+data {
+    $config $real .loc;
+    $config $scale .scale;
+}
+parameters {
+    #if anchor == "none"
+        array[@range_name] real .raw;
+    #else
+        array[@range_name-1] real .raw;
+    #endif
+}
+transformed parameters {
+    $core array[@range_name] @dtype ..;
+
+    // !definitions
+    #if anchor == "none"
+        .. = @transform(.raw);
+    #elif anchor == "first"
+        ..[1] = @transform(0.0);
+        for (k in 2:@range_name) {
+            ..[k] = @transform(.raw[k-1]);
+        }
+    #elif anchor == "last"
+        for (k in 1:(@range_name-1)) {
+            ..[k] = @transform(.raw[k]);
+        }
+        ..[@range_name] = @transform(0.0);
+    #endif
+}
+model {
+    // !definitions
+    .raw ~ normal(.loc, .scale);
+}

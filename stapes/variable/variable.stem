@@ -1,0 +1,32 @@
+data {
+    array[T] real<lower=0> .raw;
+    // Missing data
+    int<lower=0> .num_missing;
+    array[.num_missing] int<lower=1, upper=T> .missing_ids;
+
+    // Configuration parameters: imputation priors
+    $config $real .missing_loc;
+    $config $scale .missing_scale;
+}
+parameters {
+    array[.num_missing] real .raw_missing_values;
+}
+transformed parameters {
+    array[T] real<lower=0> ..;
+
+    // !definitions
+    // Fill in raw values
+    for (t in 1:T) {
+        ..[t] = .raw[t];
+    }
+    // Fill in missing values
+    if (.num_missing > 0) {
+        for (n in 1:.num_missing) {
+            ..[.missing_ids[n]] = exp(.raw_missing_values[n]);
+        }
+    }
+}
+model {
+    // !definitions
+    .raw_missing_values ~ normal(.missing_loc, .missing_scale);
+}

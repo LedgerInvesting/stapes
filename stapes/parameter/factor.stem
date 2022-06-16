@@ -1,0 +1,35 @@
+data {
+    #if not is_centered
+        $config $real .mu_loc;
+        $config $scale .mu_scale;
+    #endif
+    $config $scale .sigma_scale;
+}
+transformed data {
+    #if is_centered
+        real .mu = 0;
+    #endif
+}
+parameters {
+    #if not is_centered
+        $core real .mu;
+    #endif
+    $core real<lower=0> .sigma;
+    array[@range_name] real .norm;
+}
+transformed parameters {
+    $core array[@range_name] @dtype ..;
+
+    // !definitions
+    for (n in 1:@range_name) {
+        ..[n] = @transform(.mu + .sigma * .norm[n]);
+    }
+}
+model {
+    // !definitions
+    #if not is_centered
+        .mu ~ normal(.mu_loc, .mu_scale);
+    #endif
+    .sigma ~ cauchy(0, .sigma_scale);
+    .norm ~ normal(0, 1);
+}

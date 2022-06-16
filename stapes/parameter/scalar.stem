@@ -1,0 +1,17 @@
+data {
+    $config $real .loc;
+    $config $scale .scale;
+}
+parameters {
+    real .raw;
+}
+transformed parameters {
+    $core @dtype ..;
+
+    // !definitions
+    .. = @transform(.raw);
+}
+model {
+    // !definitions
+    .raw ~ normal(.loc, .scale);
+}
